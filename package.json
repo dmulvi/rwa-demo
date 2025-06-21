@@ -1,0 +1,21 @@
+{
+  "name": "fractionalizer",
+  "version": "0.0.1",
+  "description": "Example App leveraging Forte tools to build a RWA application",
+  "main": "index.js",
+  "directories": {
+    "lib": "lib",
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.3.0",
+    "@thrackle-io/forte-rules-engine": "^0.0.1-rc.0",
+    "@thrackle-io/forte-rules-engine-sdk": "^0.0.4-rc.1",
+    "dotenv": "^16.5.0"
+  }
+}
