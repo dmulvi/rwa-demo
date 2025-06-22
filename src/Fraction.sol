@@ -37,7 +37,10 @@ contract Fraction is FractionFRE, ERC721, Ownable {
         setRulesEngineAddress(freAddress);
     }
 
-    function mint(address recipient, uint256 quantity) public {
+    function mint(
+        address recipient,
+        uint256 quantity
+    ) public checkRulesBeforemint(recipient, quantity) {
         require(quantity > 0, "Quantity must be greater than 0");
         require(totalMinted + quantity <= TOTAL_SUPPLY, "Exceeds total supply");
 

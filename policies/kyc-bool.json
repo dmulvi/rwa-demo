@@ -1,0 +1,23 @@
+{
+  "Policy": "KYC Policy",
+  "PolicyType": "open",
+  "ForeignCalls": [
+    {
+      "name": "getKycBool",
+      "address": "0x4ed7c70F96B99c776995fB64377f0d4aB3B0e1C1",
+      "function": "getKycBool(address)",
+      "returnType": "bool",
+      "valuesToPass": "0"
+    }
+  ],
+  "Trackers": [],
+  "Rules": [
+    {
+      "condition": "FC:getKycBool == true",
+      "positiveEffects": [],
+      "negativeEffects": ["revert(\"Insufficient KYC Level\")"],
+      "callingFunction": "mint(address recipient, uint256 quantity)",
+      "encodedValues": "address recipient, uint256 quantity"
+    }
+  ]
+}

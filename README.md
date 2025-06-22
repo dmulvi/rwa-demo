@@ -36,17 +36,88 @@ bsc-testnet factory address: `0x361432816390275698fCd02918D599361744a7B3`
 call the factory and set the mintPrice to 5 FRCTL
 
 ```bash
-cast send $FACTORY_ADDRESS "createFractionatedToken(string,string,uint256,uint256,address)" "Danny" "DANNY" 10000 5000000000000000000 $DEPLOYER --rpc-url $RPC_URL --private-key $PRIV_KEY --json > tx.json
+cast send $FACTORY_ADDRESS "createFractionatedToken(string,string,uint256,uint256,address)" "Danny" "DJM" 10000 5000000000000000000 $DEPLOYER --rpc-url $RPC_URL --private-key $PRIV_KEY --json > tx.json
+
+cast send $FACTORY_ADDRESS "createFractionatedToken(string,string,uint256,uint256,address)" "Danny2" "DJM" 10000 1000000000000000000 $DEPLOYER --rpc-url $RPC_URL --private-key $PRIV_KEY --json > tx.json
+
+# update the paymentToken in the factory for new fraction deployments
+cast send $FACTORY_ADDRESS "setPaymentToken(address)" $FRACTAL_TOKEN --rpc-url $RPC_URL --private-key $PRIV_KEY
+
+cast call $FACTORY_ADDRESS "paymentToken()(address)" --rpc-url $RPC_URL
+
+cast call $FRACTION_ADDRESS "paymentToken()(address)" --rpc-url $RPC_URL
 ```
 
 now parse the tx.json to get the contract address of newly deployed token
 
 ```bash
-jq '.logs[0].address' tx.json
+export FRACTION_ADDRESS=$(jq -r '.logs[0].address' tx.json)
 ```
 
-cast call 0xa16e02e87b7454126e5e10d957a927a7f5b5d2be "name()(string)" --rpc-url $RPC_URL --private-key $PRIV_KEY
-cast call 0xa16e02e87b7454126e5e10d957a927a7f5b5d2be "balanceOf(address)(uint256)" 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --rpc-url $RPC_URL --private-key $PRIV_KEY
+- set calling contract admin
+
+```bash
+cast send $FRACTION_ADDRESS "setCallingContractAdmin(address)" $DEPLOYER --rpc-url $RPC_URL --private-key $PRIV_KEY
+```
+
+- apply the policies to the new contract
+
+```bash
+npx tsx sdk.ts setupPolicy policies/kyc-level.json
+
+export POLICY_ID=
+
+npx tsx sdk.ts applyPolicy $POLICY_ID $FRACTION_ADDRESS
+```
+
+now I need to mint agaist this to test the rules
+
+- send some of the fractal token to an address to test out the mint
+- don't forget to set the approval first
+
+```bash
+cast send $FRACTAL_TOKEN "approve(address,uint256)" $FRACTION_ADDRESS "25000000000000000000" --rpc-url $RPC_URL --private-key $PRIV_KEY
+
+cast send $FRACTAL_TOKEN "approve(address,uint256)" $FRACTION_ADDRESS "25000000000000000000" --rpc-url $RPC_URL --private-key 0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d
+
+cast send $FRACTAL_TOKEN "transfer(address,uint256)" 0x70997970C51812dc3A010C7d01b50e0d17dc79C8 250000000000000000000 --rpc-url $RPC_URL --private-key $PRIV_KEY
+
+cast call $FRACTAL_TOKEN "allowance(address,address)(uint256)" 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 $FRACTION_ADDRESS --rpc-url $RPC_URL
+```
+
+```bash
+cast send $FRACTION_ADDRESS "mint(address,uint256)" 0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC 1 --rpc-url $RPC_URL --private-key $PRIV_KEY
+
+cast send $FRACTION_ADDRESS "mint(address,uint256)" 0x8576acc5c05d6ce88f4e49bf65bdf0c62f91353c 1 --rpc-url $RPC_URL --private-key $PRIV_KEY
+
+cast send $FRACTION_ADDRESS "mint(address,uint256)" 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 1 --rpc-url $RPC_URL --private-key $PRIV_KEY
+
+cast send $FRACTION_ADDRESS "mint(address,uint256)" 0x70997970C51812dc3A010C7d01b50e0d17dc79C8 1 --rpc-url $RPC_URL --private-key 0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d
+```
+
+What's next?
+
+- mint some of the fractionalized art tokens
+- determine how many are left by calling contract (for use in the web application)
+
+KYC, AML, OFAC, rules are very flexible and they can be used for non-compliance things as well
+
+if you going to do the forte track, this is how I'd approach it
+
+It is in development, don't be stuck, come talk to me! Or discord, TG, etc,
+Let me know and I can come check in on you.
+
+slide that describes at a high level of the project (my demo) - these are the things I did: - RWA - policies - these token contracts are integrated with the fRE (and I'll cover that in a minute)
+
+- define the policy live
+- orient them with the docs
+- demonstrate the testing of it working/not working
+
+```bash
+cast call $FRACTAL_TOKEN "name()(string)" --rpc-url $RPC_URL
+cast call $FRACTAL_TOKEN "balanceOf(address)(uint256)" 0x70997970C51812dc3A010C7d01b50e0d17dc79C8 --rpc-url $RPC_URL
+cast call $FRACTION_ADDRESS "name()(string)" --rpc-url $RPC_URL
+```
 
 Building Your Own
 
@@ -84,7 +155,7 @@ see fre-oracle-adapter-chainalysis repo for deploy directions
 KYC access level
 
 ```bash
-forge script scripts/KYC.s.sol --rpc-url $RPC_URL --private-key $PRIV_KEY --broadcast --verify
+forge script script/KYC.s.sol --rpc-url $RPC_URL --private-key $PRIV_KEY --broadcast --verify
 ```
 
 KYC contract: `0xC38E1aCF67A1a8BB29b590069411316034e8BCb6` (verification failing due to bsc issue as of now)
@@ -93,12 +164,37 @@ KYC contract: `0xC38E1aCF67A1a8BB29b590069411316034e8BCb6` (verification failing
 
 Included `anvilState.json` file includes FRE and OFAC sanctions list adapter contract at `0x0B306BF915C4d645ff596e518fAf3F9669b97016`.
 
+```bash
+cast call 0x0B306BF915C4d645ff596e518fAf3F9669b97016 "isDenied(address)(bool)" 0x8576acc5c05d6ce88f4e49bf65bdf0c62f91353c --rpc-url $RPC_URL
+```
+
+KYC contract is deployed at `$KYC_CONTRACT`
+
+```bash
+cast send $KYC_CONTRACT "setKycLevel(address,uint256)" 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 3 --rpc-url $RPC_URL --private-key $PRIV_KEY
+
+cast send $KYC_CONTRACT "setKycLevel(address,uint256)" 0x70997970C51812dc3A010C7d01b50e0d17dc79C8 3 --rpc-url $RPC_URL --private-key $PRIV_KEY
+
+cast call $KYC_CONTRACT "getKycLevel(address)(uint256)" 0x8576acc5c05d6ce88f4e49bf65bdf0c62f91353c --rpc-url $RPC_URL
+
+cast call $KYC_CONTRACT "getKycLevel(address)(uint256)" 0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC --rpc-url $RPC_URL
+
+
+cast call $FRACTION_ADDRESS "balanceOf(address)(uint256)" 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --rpc-url $RPC_URL
+# Boolean version
+
+cast send $KYC_CONTRACT "setKycBool(address,bool)" 0x70997970C51812dc3A010C7d01b50e0d17dc79C8 true --rpc-url $RPC_URL --private-key $PRIV_KEY
+
+cast call $KYC_CONTRACT "getKycBool(address)(bool)" 0x70997970C51812dc3A010C7d01b50e0d17dc79C8 --rpc-url $RPC_URL
+cast call $KYC_CONTRACT "getKycBool(address)(bool)" 0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC --rpc-url $RPC_URL
+```
+
 Hackathon Ideas:
 
 - add support for EIP-7943
 - make the fractionalization quantity adjustable
 - add more sophisticated rules
-- build a UI that allows uploading the artwork, split it into 10k pieces so that when users mint their NFT is a chunk of the fractionalized art.
+- build a UI that allows uploading the artwork, split it into 10k pieces so that when users mint, their NFT is a chunk of the fractionalized art.
 - enforce a range for totalSupply of the erc-721 (10-10K) or something
 - make the contracts upgradeable
 
@@ -107,8 +203,25 @@ amm only trading
 - only allow the amm contract
 - allow all EOAs
 
-Extra Rules
+get anvilstate file that includes:
 
-- min hold time for NFT
+- fractal token
+- ofac adapter
+- kyc FC
 
-- only allow minting of NFT if rules engine address is set or something to make sure
+Workshop flow
+
+- start with slides
+- discuss compliance
+  - kyc/aml
+  - ofac sanctions list
+- mention the rules engine and what it does
+  - separate the compliance logic from the rest of your app
+  - many other use cases of course
+    - incentive alignment
+      - gaming example with NFT level
+
+FAQs
+
+calling function to test a policy and get : execution reverted data 0x
+potential causes - error in the function you're calling to test. Try testing the same function w/o rules engine enabled. If it works then problem is with the policy - if your policy uses a foreign contract call, but the address is wrong you will get this error

@@ -9,9 +9,12 @@ contract KYC is AccessControl {
 
     // Mapping to store KYC levels (0-3)
     mapping(address => uint256) private kycLevels;
+    // mapping to store boolean version of kyc check
+    mapping(address => bool) private isKycd;
 
     // Events
     event KYCLevelSet(address indexed user, uint256 level);
+    event KYCToggled(address indexed user, bool hasKyc);
 
     constructor() {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
@@ -28,8 +31,20 @@ contract KYC is AccessControl {
         emit KYCLevelSet(user, level);
     }
 
+    function setKycBool(
+        address user,
+        bool hasKyc
+    ) external onlyRole(KYC_ADMIN_ROLE) {
+        isKycd[user] = hasKyc;
+        emit KYCToggled(user, hasKyc);
+    }
+
     // Function to get KYC level for an address
     function getKycLevel(address user) external view returns (uint256) {
         return kycLevels[user];
+    }
+
+    function getKycBool(address user) external view returns (bool) {
+        return isKycd[user];
     }
 }

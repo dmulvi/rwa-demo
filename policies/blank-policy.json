@@ -1,0 +1,23 @@
+{
+  "Policy": "My Blank Policy",
+  "PolicyType": "",
+  "ForeignCalls": [
+    {
+      "name": "",
+      "address": "",
+      "function": "",
+      "returnType": "",
+      "valuesToPass": ""
+    }
+  ],
+  "Trackers": [],
+  "Rules": [
+    {
+      "condition": "",
+      "positiveEffects": [],
+      "negativeEffects": [],
+      "callingFunction": "",
+      "encodedValues": ""
+    }
+  ]
+}

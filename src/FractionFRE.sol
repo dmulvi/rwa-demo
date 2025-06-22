@@ -11,6 +11,16 @@ pragma solidity ^0.8.24;
  *              for modifiers that are generated and injected programmatically.
  */
 abstract contract FractionFRE is RulesEngineClient {
+    modifier checkRulesBeforemint(address recipient, uint256 quantity) {
+        bytes memory encoded = abi.encodeWithSelector(
+            msg.sig,
+            recipient,
+            quantity
+        );
+        _invokeRulesEngine(encoded);
+        _;
+    }
+
     modifier checkRulesBefore_update(address to, uint256 tokenId) {
         bytes memory encoded = abi.encodeWithSelector(msg.sig, to, tokenId);
         _invokeRulesEngine(encoded);
